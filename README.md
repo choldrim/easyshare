@@ -1,5 +1,4 @@
 #easyshare
---------------------------
 easyshare is a share file tool for nautilus and command-line, it can sharing file easily with qrcode.
 
 ##Require

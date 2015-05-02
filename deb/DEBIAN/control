@@ -1,0 +1,10 @@
+Package: easyshare
+Source: easyshare
+Version: 1.0.0
+Architecture: amd64
+Maintainer: choldrim@foxmail.com
+Installed-Size: 114
+Depends: python3-bottle, python3-cherrypy3, python-nautilus, python3-pyqt5, python3-pil
+Section: utils
+Priority: optional
+Description: easyshare is a share file tool for nautilus and command-line, it can sharing file easily with qrcode.

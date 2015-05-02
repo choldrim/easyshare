@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
+import sys
+import socket
+import fcntl
+import random
+import struct
+import os
+from multiprocessing import Process
+
+import qrcode
+from bottle import route, run, static_file
+from PyQt5.QtCore import QUrl
+from PyQt5.QtQuick import QQuickView
+from PyQt5.QtWidgets import QApplication
+
+shareFileName = ""
+shareFileDir = ""
+
+@route('/<fileName:path>')
+def download(fileName):
+    if fileName == shareFileName:
+        return static_file(fileName, root=shareFileDir, download=fileName)
+
+def startServer(host, port):
+    run(server="cherrypy", host=host, port=port)
+
+
+def getNetworkAdress(ifname):
+    s = socket.socket()
+    try:
+        addr = socket.inet_ntoa(fcntl.ioctl(s.fileno(),0x8915,struct.pack('256s', ifname[:15].encode("utf-8")))[20:24])
+    except OSError as e:
+        if e.errno == 99:
+            return ""
+        else:
+            raise e
+    return addr
+
+def genQRCode(code, imgPath):
+    img = qrcode.make(code)
+    img.save(imgPath)
+
+def showQmlPannel(qmlPath):
+    app = QApplication(["easyshare"])
+    view = QQuickView()
+    view.setSource(QUrl(qmlPath))
+    view.show()
+    app.exec_()
+
+def getAvailablePort(port):
+    maxPort = port + 20
+    while port < maxPort:
+        try:
+            socket.socket().bind(("0.0.0.0", port))
+            return port
+        except OSError as e:
+            if "Address already in use" in str(e):
+                port += 1
+                continue
+        except Exception as e:
+            print ("Error in func(%s) :" % "getAvailablePort")
+            print(e)
+            return random.randrange(10000, 65535)
+
+if __name__ == "__main__":
+
+    # nautilus
+    if os.environ.get("NAUTILUS_SCRIPT_SELECTED_FILE_PATHS"):
+        selected = os.environ.get("NAUTILUS_SCRIPT_SELECTED_FILE_PATHS", "")
+        targets = selected.splitlines()
+        absFilePath = targets[0]
+        shareFileName = os.path.basename(absFilePath)
+        shareFileDir = os.path.dirname(absFilePath)
+
+    elif len(sys.argv) < 2:
+        print("you need to select a file for easyshare, abort.")
+        quit(1)
+
+    else:
+        # command-line sharing
+        if os.path.isabs(sys.argv[1]):
+            shareFileName = os.path.basename(sys.argv[1])
+            shareFileDir = os.path.dirname(sys.argv[1])
+        else:
+            shareFileName = sys.argv[1]
+            shareFileDir = os.getcwd()
+
+    print("server:", shareFileDir, "file:", shareFileName)
+
+    # get available port
+    startPort = 8090
+    port = getAvailablePort(startPort)
+
+    # get ip from protable interface
+    allIfs = [ ifn[1] for ifn in socket.if_nameindex()]
+    addr = ""
+    for i in allIfs:
+        if not (i.startswith("eth") or i.startswith("wlan")):
+            continue
+        addr = getNetworkAdress(i)
+        if addr == "":
+            continue
+        else:
+            break
+
+    if addr == "":
+        print("no available network interface can be used to share file, abort.")
+        quit(1)
+
+    # generate qrcode
+    url = "http://%s:%d/%s" %(addr, port, shareFileName)
+    imgPath = "/tmp/easyshare_tmp.png"
+    genQRCode(url, imgPath)
+
+    # load qml pannel
+    qmlPath = "/usr/share/easyshare/show.qml"
+    p1 = Process(target=showQmlPannel, args=(qmlPath, ))
+    p1.start()
+
+    # start sharing server
+    p2 = Process(target=startServer, args=(addr, port, ))
+    p2.start()
+
+    # quit when close the qml pannel
+    p1.join()
+    p2.terminate()
+
