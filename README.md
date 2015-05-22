@@ -9,16 +9,28 @@ easyshare is a share file tool for nautilus and command-line, it can sharing fil
 * python-nautilus
 
 ```shell
-# just install qrcode, other packages was written as depends on deb pkg
+# install qrcode, other packages was written as depends on deb pkg
 sudo apt-get install python3-pip
 sudo pip3 install qrcode
 ```
 
 ##Installation
 ```shell
-git clone 
+git clone *this-project.git*
 cd easyshare
-sudo make install
+dpkg-deb -b deb easyshare_1.0.deb
+# install the deb package
+sudo dpkg -i easyshare_1.0.deb
+# if you get something wrong with dependence
+# run this cmd to fix it:
+# sudo apt-get install -f
+```
+
+## Or you can install manually
+```shell
+# install *the Require pkgs mentioned above*
+# and then, run:
+# sudo make install
 ```
 
 ##usage
@@ -28,12 +40,13 @@ restart your nautilus if your nautilus is running
 # command line way
 nautilus -q ; nautilus .
 ```
-a. choose the file you want to share  
+a. choose the file you want to share
 b. right-click -> easyshare
 
 
 ### 2.command-line
 ```shell
 # just run easyshare + your-file directly
-easyshare your-file
+# eg:
+easyshare your-sharing-file
 ```
